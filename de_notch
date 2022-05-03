@@ -1,0 +1,40 @@
+#!/usr/bin/env python3
+"""Small script to add a black bar to the top of an image which "removes" the notch from 2021 MBPs"""
+
+from email.policy import default
+from unicodedata import name
+from PIL import Image
+import click
+
+
+@click.command()
+@click.argument('filename')
+@click.option('--notch-size', default=74, help='The pixel height of the notch region on the screen. Deafult is the 14" MBP 74px height')
+@click.option('--target-resolution', default='3024x1964', help='The target resolution of the output image default is 3024x1964')
+def main(filename: str, notch_size: int, target_resolution: str):
+    target_res = target_resolution.split('x')
+    target_resolution = (int(target_res[0]), int(target_res[1]))
+    pic = Image.open(filename)
+    if pic.size[0] < pic.size[1]:
+        scale_side = 0
+    else:
+        scale_side = 1
+    scale_ratio = pic.size[scale_side] / target_resolution[scale_side]
+    if scale_ratio < 1:
+        scale_ratio = 1 / scale_ratio
+    scaled_resolution = ((int)(pic.size[0] * scale_ratio), (int)(pic.size[1] * scale_ratio))
+    scaled_image = pic.resize(scaled_resolution)
+    cropped_image = scaled_image.crop((0, 0, 3024, 1964))
+    for y in range(0, notch_size):
+        for x in range(0, target_resolution[0] - 1):
+            cropped_image.putpixel((x, y), (0, 0, 0))
+    name_chunks = filename.split('.')
+    output_name = name_chunks[0]
+    for i in range(1, len(name_chunks) - 1):
+        output_name = f'{output_name}.{name_chunks[i]}'
+    output_name = f'{output_name}_de-notched.png'
+    cropped_image.save(output_name)
+
+
+if __name__ == '__main__':
+    main()
